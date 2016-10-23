@@ -4,7 +4,7 @@
 '''
 Created on Oct 12, 2016
 @author:     King1600
-@summary:    Run KBot in seperate prrocess to enable restart 
+@summary:    Run KBot in seperate process to enable restart 
 '''
 
 import os
