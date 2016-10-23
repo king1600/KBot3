@@ -39,7 +39,7 @@ class YoutubeExtractor(object):
         ''' get audio stream url from video '''
         url = self.getVideoId(url)
         stream = pafy.new(url, basic=False, gdata=False)
-        return stream.getbest(preftype=fmt).url_https
+        return stream.getbestaudio(preftype=fmt).url_https
     
     async def getThumbnail(self, url):
         ''' returns thumbnail url '''
@@ -112,8 +112,8 @@ class YoutubeExtractor(object):
                 if 'format' in kargs:
                     if kargs['format'].lower() in ['m4a','webm']:
                         fmt = kargs['format'].lower()
-                    else: fmt = 'any'
-                else: fmt = 'any'
+                    else: fmt = 'm4a'
+                else: fmt = 'm4a'
     
                 # try getting stream link 
                 try:
