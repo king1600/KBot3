@@ -1,0 +1,6 @@
+discord.py[voice]
+youtube_dl
+cleverbot
+requests
+pafy
+bs4

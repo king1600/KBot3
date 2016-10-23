@@ -1,2 +1,1 @@
-# KBot3
-Your average bot
+# KBot : Your average bot (disguised as a user)

@@ -1,0 +1,86 @@
+{PREFIX}define [word]: urban dictionary definition
+
+---------------------------------------------------------
+
+{PREFIX}insult       : random insult
+
+---------------------------------------------------------
+
+{PREFIX}help         : print commands
+
+---------------------------------------------------------
+
+{PREFIX}ping         : check if bot is online
+
+---------------------------------------------------------
+
+{PREFIX}join         : get bot join link to add to server
+
+---------------------------------------------------------
+
+{PREFIX}clean [amount] [args]  : clean last bot messages in current channel
+	*args*:
+		[silent or quiet]: dont output a message after cleanup
+		[me]: cleanup up bots and your messages
+		
+---------------------------------------------------------
+
+{PREFIX}filter [mode] : enable and disable chat filter
+	*modes*:
+		['enable' or '1' or 'on' or 'activate']
+		['disable' or '0' or 'off' or 'deactivate']
+		
+---------------------------------------------------------
+
+{PREFIX}admin [mode] : make it so that only owner can execute commands
+	*modes*:
+		['enable' or '1' or 'on' or 'activate']
+		['disable' or '0' or 'off' or 'deactivate']
+		
+---------------------------------------------------------
+
+{PREFIX}shorten [link] : use goo.gl to shorten a link
+
+---------------------------------------------------------
+
+{PREFIX}restart : % OWNER ONLY % restart bot
+
+---------------------------------------------------------
+
+{PREFIX}shutdown: % OWNER ONLY % shutdown bot
+
+---------------------------------------------------------
+
+{PREFIX}youtube [mode-args] [args] [url or search:youtube search]: get video info
+	*mode args*:
+		-- required --
+		"audio" : Get youtube raw audio link
+		"video" : Get youtube raw video link
+		"title" : Get title of search or url
+		["thumb", "thumbnail", "image"] : Get video image link
+		["data", "json", "oembed", "info"] : Get JSON video info
+		"debug" : Get json args from command
+
+	-- you may combine modes using the "|" character --
+	-- ex: /youtube audio|title|image uZJKOiswbAQ --
+
+	*args*:
+		-- you can add any arguments you want --
+		-- as long as its in the format of --
+		-- key:value ---
+		-- ex: /youtube debug key:value foo:bar some:thing uZJKOiswbAQ ---
+		## Here are some arg options for the current modes ##
+		audio -> "format:value".
+			value = either "m4a" or "webm"
+		video -> "format:value".
+			value = either "mp4" or "webm"
+		audio & video -> "raw:true" or "direct:true".
+			gives direct raw link instead of goo.gl shortened
+
+	*url or search arg*:
+		-- you can either provide a youtube url or youtube video id --
+		-- or do a search arg with youtube data to search --
+		-- ex: /youtube audio search:Mitis movements --
+		-- ex: /youtube audio https://www.youtube.com/watch?v=uZJKOiswbAQ --
+		-- [make sure search arg is the last thing in command]
+		"search:{youtube query that can have spaces}"
