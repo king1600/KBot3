@@ -8,7 +8,6 @@ Created on Oct 13, 2016
 @summary:    Urban Dictionary define stripped from pypi urbandict
 '''
 
-import asyncio
 from bs4 import BeautifulSoup
 from urllib.parse import quote
 from html.parser import HTMLParser

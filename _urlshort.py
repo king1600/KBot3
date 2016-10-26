@@ -8,7 +8,6 @@ Created on Oct 22, 2016
 '''
 
 import json
-import asyncio
 from constants import *
 
 class UrlShortener(object):

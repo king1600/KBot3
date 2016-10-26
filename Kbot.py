@@ -13,7 +13,6 @@ import sys
 import time
 import random
 import discord
-import asyncio
 from messages import *
 from constants import *
 from DiscordBot import DiscordBot
@@ -22,6 +21,7 @@ from _youtube import YoutubeExtractor
 from _cleverbot import Cleverbot
 from _hastebin import Hastebin
 from _urlshort import UrlShortener
+from _player import Player
 
 # add these:
 # google url shotener
@@ -43,6 +43,7 @@ class KBot(DiscordBot):
         self.youtube   = YoutubeExtractor(self)
         self.cleverbot = Cleverbot(self.session)
         self.hastebin  = Hastebin(self.session)
+        self.player    = Player(self, bot)
         
     async def on_message(self, msg):
         ''' handle messages '''
@@ -55,8 +56,15 @@ class KBot(DiscordBot):
         hasRun  = False
         ping    = 0
         
-        # onlt perform actions when bot is ready
+        # only perform actions when bot is ready
         if not self.isReady: return
+        
+        # filter bad words
+        if channel.id in self.filterInfo:
+            await bot.send_message(channel,
+                    random.choice(FILTER_RESPONSES).format(user.display_name))
+            hasRun = True
+                    
         
         # bot shouldn't response to itself
         if msg.author == self.user: return
@@ -72,9 +80,6 @@ class KBot(DiscordBot):
         # on admin
         if self.adminOnly:
             if user != self.owner: hasRun = True
-            
-        # on filter
-        await self.filterBadWords(channel, user, msg, data)
         
         ######### Message Reactions ############
         if 'notice me s' in data and not hasRun:
@@ -102,9 +107,9 @@ class KBot(DiscordBot):
                 adj = ' '.join(adj)
                 
                 if user == self.owner:
-                    output = WHOS_UR_TRUE.format(adj, user.name)
+                    output = WHOS_UR_TRUE.format(adj, user.display_name)
                 else:
-                    output = WHOS_UR_FALSE.format(user.name)
+                    output = WHOS_UR_FALSE.format(user.display_name)
                     
                 if ping != 0:
                     elapsed = int((time.time() - ping) * 1000.)
@@ -153,7 +158,9 @@ class KBot(DiscordBot):
                     if ping != 0:
                         elapsed = int((time.time() - ping) * 1000.)
                         cleverResponse += "\n```" + str(elapsed) + "ms```"
-                    await bot.send_message(channel, cleverResponse)
+                        
+                    if not user.id == "230716794212581376":
+                        await bot.send_message(channel, cleverResponse)
                     hasRun = True
             
             await self.processCommands(user, channel, 
@@ -166,7 +173,32 @@ class KBot(DiscordBot):
         
     async def decision(self, probability):
         ''' generate probability '''
-        return random.random() < (probability / 100.)   
+        return random.random() < (probability / 100.)
+    
+    async def removeBadWords(self, data):
+        ''' censor swear words in text '''
+        content = data.split()
+        for pos, word in enumerate(content):
+            chars = list(word)
+            lword = word.lower()
+            for bad in BAD_WORDS:
+                bad = bad.lower()
+                while True:
+                    isBad = False
+                    if bad in lword:
+                        isBad = True
+                        bstart = lword.index(bad)
+                        bend   = bstart + len(bad)
+                        for x in range(bstart, bend):
+                            if x != bstart:
+                                chars[x] = "*"
+                    word  = ''.join(chars)
+                    lword = word.lower()
+                    if isBad != True:
+                        break
+            content[pos] = word
+        content = ' '.join(content)
+        return content
     
     #### Process if / else statements ####
         
@@ -268,6 +300,7 @@ class KBot(DiscordBot):
                         
                     # get users to clean
                     usersToClean = []
+                    purgeAll     = False
                     for word in args:
                         if word.startswith('<@') and word.endswith('>'): 
                             userID = word[2:-1]
@@ -278,20 +311,30 @@ class KBot(DiscordBot):
                     if 'me' in lowered or 'self' in lowered:
                         if user not in usersToClean:
                             usersToClean.append(user)
+                    if '@everyone' in lowered:
+                        purgeAll = True
+                            
+                    
+                    # delete prior message
+                    await bot.delete_message(msg)
                     
                     # clean messages
-                    await bot.delete_message(msg)
-                    prevMessages = []
-                    async for message in bot.logs_from(channel, limit=limit):
-                        if message.author == self.user:
-                            prevMessages.append(message)
-                            count += 1
-                        for u in usersToClean:
-                            if message.author == u:
+                    if not purgeAll:
+                        prevMessages = []
+                        async for message in bot.logs_from(channel, limit=limit):
+                            if message.author == self.user:
                                 prevMessages.append(message)
                                 count += 1
-                        if count >= amount: break
-                    await bot.delete_messages(prevMessages)
+                            for u in usersToClean:
+                                if message.author == u:
+                                    prevMessages.append(message)
+                                    count += 1
+                            if count >= amount: break
+                        await bot.delete_messages(prevMessages)
+                    else:
+                        def _check(*args): return True
+                        deleted = await bot.purge_from(channel, limit=amount, check=_check)
+                        print("Deleted: " + str(len(deleted)) + " messages!")
                         
                     # make output
                     if not silent:
@@ -303,7 +346,59 @@ class KBot(DiscordBot):
                     self.log(errorString)
                     
             elif data.startswith('filter'):
+                if user != self.owner: out = ON_NOT_OWNER
+                else:
+                    try:
+                        setting = args[1]
+                        
+                        # enable
+                        for c in ONS:
+                            if c in setting.lower():
+                                self.filterInfo[channel.id] = True
+                                out = ON_FILTER_ON
+                                break
+                        
+                        # disable
+                        for c in OFFS:
+                            if c in setting.lower():
+                                if channel.id in self.filterInfo:
+                                    self.filterInfo.pop(channel.id, None)
+                                out = ON_FILTER_OFF
+                                break
+                            
+                        # nothing
+                        if out == None:
+                            out = ON_BAD_COMMAND
+                    except:
+                        pass
+            
+            ### YT DL functions ###
+            
+            elif data.startswith('queue'):
+                out = await self.player.queue(msg)
+            
+            elif data.startswith('skip'):
+                out = await self.player.skip(msg)
+            
+            elif data.startswith('pause'):
+                out = await self.player.pause(msg)
+            
+            elif data.startswith('volume'):
+                out = await self.player.volume(msg)
+            
+            elif data.startswith('resume'):
+                out = await self.player.resume(msg)
+            
+            elif data.startswith('play'):
+                out = await self.player.play(msg)
+            
+            elif data.startswith('summon'):
+                out = await self.player.summon(msg)
+            
+            elif data.startswith('leave'):
                 pass
+                
+            #### END YT DL ###
             
             elif data.startswith('shush'):
                 self.isQuiet = True
@@ -371,6 +466,7 @@ class KBot(DiscordBot):
                 
             if toKill:
                 self.config["lastChannel"] = str(channel.id)
+                self.player.close()
                 await self.quit()
         
     async def on_ready(self):
@@ -392,25 +488,6 @@ class KBot(DiscordBot):
             except Exception as error:
                 self.log("Ready error: " + str(error))
         self.isReady = True
-            
-    async def filterBadWords(self, channel, user, msg ,data):
-        ''' filter out bad words when filter is on '''
-        if self.filterInfo[0]:
-            filterChannel = self.filterInfo[1]
-            if filterChannel != None:
-                if channel == filterChannel:
-                    remove = False
-                    for word in data.split():
-                        for char in BAD_WORDS:
-                            if char in word.lower():
-                                remove = True
-                                break
-                        if remove: break
-                    if remove:
-                        response = random.choice(FILTER_RESPONSES)
-                        response = response.format(user.name)
-                        await bot.delete_message(msg)
-                        await bot.send_message(channel, response)
 
 def main():
     global bot

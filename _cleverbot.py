@@ -10,7 +10,6 @@ Created on Oct 12, 2016
 """An unofficial library to access the Cleverbot API."""
 import collections
 import hashlib
-import asyncio
 from urllib.parse import urlencode
 from html.parser import HTMLParser
 

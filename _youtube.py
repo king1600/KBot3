@@ -7,6 +7,7 @@ Created on Oct 12, 2016
 @summary:    Youtube info fetcher
 '''
 
+import re
 import pafy
 import json
 import constants
@@ -19,6 +20,7 @@ class YoutubeExtractor(object):
     
     def __init__(self, bot):
         self.bot     = bot
+        self.apiKey  = self.bot.googleKey
         self.session = self.bot.session
 
     def getVideoId(self, url):
@@ -29,13 +31,13 @@ class YoutubeExtractor(object):
             url = url.split("&")[0]
         return url
     
-    async def getVideoStream(self, url, fmt):
+    async def getVideoStream(self, url, fmt='any'):
         ''' get video stream url from video '''
         url = self.getVideoId(url)
         stream = pafy.new(url, basic=False, gdata=False)
         return stream.getbest(preftype=fmt).url_https
     
-    async def getAudioStream(self, url, fmt):
+    async def getAudioStream(self, url, fmt='m4a'):
         ''' get audio stream url from video '''
         url = self.getVideoId(url)
         stream = pafy.new(url, basic=False, gdata=False)
@@ -64,6 +66,26 @@ class YoutubeExtractor(object):
         async with self.session.get(link) as response:
             info = await response.text()
             return json.loads(info) # return json object
+        
+    async def getVideoTime(self, url):
+        ''' get the video time in {'hours','minutes','seconds'} '''
+        link = self.getVideoId(url)
+        link = constants.YOUTUBE_GDATA.format(id=link, key=self.apiKey)
+        
+        async with self.session.get(link) as response:
+            info = await response.text()
+            info = json.loads(info)
+            info = info['items'][0]['contentDetails']
+            duration = str(info['duration'])
+            duration = duration[2:].lower() # remove "PT"
+            TIME = {'hours':0,'minutes':0,'seconds':0}
+            for unit in TIME:
+                if unit[0] in duration:
+                    valid = duration.split(unit[0])[0]
+                    valid = re.sub('\D', '', valid)
+                    TIME[unit] = int(valid[-2:])
+            return TIME
+            
     
     async def getSearchUrl(self, query):
         ''' get the first result from youtube search '''

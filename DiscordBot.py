@@ -22,7 +22,7 @@ class DiscordBot(object):
     isReady    = False
     isActive   = True
     isQuiet    = False
-    filterInfo = (False, None)
+    filterInfo = {}
     
     # bot info
     config     = {}
@@ -53,6 +53,10 @@ class DiscordBot(object):
             self.cmdInfo = f.read()
             self.cmdInfo = self.cmdInfo.replace('{PREFIX}', self.prefix)
         
+        # load opus for audio
+        if not discord.opus.is_loaded():
+            discord.opus.load_opus('opus')
+        
         # get event loop & bot
         self.loop      = asyncio.get_event_loop()
         self.bot       = botObject
@@ -67,13 +71,28 @@ class DiscordBot(object):
         self.writeConfig()
         
     def activateLoop(self):
-        asyncio.set_event_loop(self.loop)
+        task = None
         try:
-            self.loop.run_until_complete(self.start())
-        except:
-            self.loop.run_until_complete(self.bot.logout())
+            asyncio.set_event_loop(self.loop)
+            try:
+                #self.loop.run_until_complete(self.start())
+                task = asyncio.Task(self.start())
+                self.loop.run_forever()
+            except:
+                self.loop.run_until_complete(self.bot.logout())
+        except Exception as e:
+            print(str(e))
+            
+        # close all tasks and loop
+        if task is not None: task.cancel()
+        pending = asyncio.Task.all_tasks(self.loop)
+        for _task in pending:
+            try: _task.cancel_all()
+            except: pass
         self.loop.close()
-        self.loop.shutdown()
+            
+        # emit exit event
+        self.exitEvent.set()
         
     def readConfig(self):
         ''' load config json data '''
@@ -95,7 +114,6 @@ class DiscordBot(object):
     async def quit(self):
         ''' quit bot '''
         await self.closeAll()
-        self.exitEvent.set()
         
     def log(self, obj):
         ''' synchronized logging '''
@@ -128,3 +146,4 @@ class DiscordBot(object):
         ''' close all objects '''
         await self.bot.logout()
         await self.bot.close()
+        self.loop.stop()
